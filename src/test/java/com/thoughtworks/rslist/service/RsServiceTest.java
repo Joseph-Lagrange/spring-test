@@ -113,4 +113,15 @@ class RsServiceTest {
     assertEquals(rsEventDto.getAmount(), 100);
     assertEquals(rsEventDto.getRankNum(), 1);
   }
+
+  @Test
+  void should_not_buy_event_when_rank_num_or_user_id_is_not_exist() {
+    when(rsEventRepository.findByRankNum(anyInt())).thenReturn(Optional.empty());
+    when(userRepository.findById(anyInt())).thenReturn(Optional.empty());
+
+    assertThrows(RuntimeException.class, () -> {
+      rsService.buy(100, 10, rsEvent);
+    });
+  }
+
 }
