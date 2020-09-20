@@ -53,13 +53,24 @@ public class RsService {
     rsEventRepository.save(rsEvent);
   }
 
-  public ResponseEntity buy(int srcRsEventPOId, RsEvent rsEvent, UserDto userPO, int amount, int rank) {
-    RsEventDto rsEventPO = RsEventDto.builder().rankNum(rank).voteNum(rsEvent.getVoteNum())
-            .eventName(rsEvent.getEventName()).keyword(rsEvent.getKeyword())
-            .user(userPO).amount(amount).build();
-    TradeDto tradeDto = TradeDto.builder().amount(amount).rankNum(rank).rsEvent(rsEventPO).user(userPO).build();
-    rsEventRepository.save(rsEventPO);
-    rsEventRepository.deleteById(srcRsEventPOId);
+  public ResponseEntity buy(int amount, int rank, RsEvent rsEvent) {
+    Optional<RsEventDto> eventOptional = rsEventRepository.findByRankNum(rank);
+    Optional<UserDto> userOptional = userRepository.findById(rsEvent.getUserId());
+    if (!eventOptional.isPresent() || !userOptional.isPresent()
+                                   || eventOptional.get().getAmount() > amount) {
+      return ResponseEntity.badRequest().build();
+      // throw new RuntimeException();
+    }
+    RsEventDto rsEventDto = eventOptional.get();
+    rsEventDto.setRankNum(rank);
+    rsEventDto.setVoteNum(rsEvent.getVoteNum());
+    rsEventDto.setEventName(rsEvent.getEventName());
+    rsEventDto.setKeyword(rsEvent.getKeyword());
+    rsEventDto.setUser(userOptional.get());
+    rsEventDto.setAmount(amount);
+    TradeDto tradeDto = TradeDto.builder().amount(amount).rankNum(rank).rsEvent(rsEventDto)
+            .user(userOptional.get()).build();
+    rsEventRepository.save(rsEventDto);
     tradeRepository.save(tradeDto);
     return ResponseEntity.ok().build();
   }

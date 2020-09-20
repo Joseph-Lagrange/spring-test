@@ -208,10 +208,10 @@ class RsControllerTest {
 
     mockMvc.perform(get("/rs/list"))
             .andExpect(jsonPath("$", hasSize(3)))
-            .andExpect(jsonPath("$[2].eventName", is("ForthEvent")))
-            .andExpect(jsonPath("$[2].keyword", is("Entertainment")))
-            .andExpect(jsonPath("$[2].amount", is(100)))
-            .andExpect(jsonPath("$[2].rank", is(1)))
+            .andExpect(jsonPath("$[0].eventName", is("ForthEvent")))
+            .andExpect(jsonPath("$[0].keyword", is("Entertainment")))
+            .andExpect(jsonPath("$[0].amount", is(100)))
+            .andExpect(jsonPath("$[0].rank", is(1)))
             .andExpect(status().isOk());
   }
 

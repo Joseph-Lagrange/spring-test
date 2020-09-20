@@ -1,7 +1,10 @@
 package com.thoughtworks.rslist.service;
 
+import com.thoughtworks.rslist.domain.RsEvent;
+import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
+import com.thoughtworks.rslist.dto.TradeDto;
 import com.thoughtworks.rslist.dto.UserDto;
 import com.thoughtworks.rslist.dto.VoteDto;
 import com.thoughtworks.rslist.repository.RsEventRepository;
@@ -15,6 +18,7 @@ import org.mockito.Mock;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verify;
@@ -22,61 +26,63 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 class RsServiceTest {
+
   RsService rsService;
 
-  @Mock RsEventRepository rsEventRepository;
-  @Mock UserRepository userRepository;
-  @Mock VoteRepository voteRepository;
-  @Mock TradeRepository tradeRepository;
+  @Mock
+  RsEventRepository rsEventRepository;
+
+  @Mock
+  UserRepository userRepository;
+
+  @Mock
+  VoteRepository voteRepository;
+
+  @Mock
+  TradeRepository tradeRepository;
+
   LocalDateTime localDateTime;
+
   Vote vote;
+
+  RsEvent rsEvent;
 
   @BeforeEach
   void setUp() {
     initMocks(this);
     rsService = new RsService(rsEventRepository, userRepository, voteRepository, tradeRepository);
     localDateTime = LocalDateTime.now();
-    vote = Vote.builder().voteNum(2).rsEventId(1).time(localDateTime).userId(1).build();
+    vote = Vote.builder().rsEventId(1).userId(1)
+            .voteNum(3).time(localDateTime).build();
+    rsEvent = RsEvent.builder().eventName("ForthEvent").keyword("Entertainment")
+            .voteNum(0).userId(1).build();
   }
 
   @Test
   void shouldVoteSuccess() {
-    // given
+    UserDto userPO = UserDto.builder().id(1).voteNum(5)
+            .userName("Mike").gender("male").age(20)
+            .phone("13688896832").email("a@b.com").build();
+    RsEventDto rsEventPO = RsEventDto.builder().id(1).voteNum(1)
+            .keyword("FirstEvent").eventName("Economy")
+            .user(userPO).build();
 
-    UserDto userDto =
-        UserDto.builder()
-            .voteNum(5)
-            .phone("18888888888")
-            .gender("female")
-            .email("a@b.com")
-            .age(19)
-            .userName("xiaoli")
-            .id(2)
-            .build();
-    RsEventDto rsEventDto =
-        RsEventDto.builder()
-            .eventName("event name")
-            .id(1)
-            .keyword("keyword")
-            .voteNum(2)
-            .user(userDto)
-            .build();
+    when(userRepository.findById(anyInt())).thenReturn(Optional.of(userPO));
+    when(rsEventRepository.findById(anyInt())).thenReturn(Optional.of(rsEventPO));
 
-    when(rsEventRepository.findById(anyInt())).thenReturn(Optional.of(rsEventDto));
-    when(userRepository.findById(anyInt())).thenReturn(Optional.of(userDto));
-    // when
     rsService.vote(vote, 1);
-    // then
-    verify(voteRepository)
-        .save(
-            VoteDto.builder()
-                .num(2)
-                .localDateTime(localDateTime)
-                .user(userDto)
-                .rsEvent(rsEventDto)
-                .build());
-    verify(userRepository).save(userDto);
-    verify(rsEventRepository).save(rsEventDto);
+
+    verify(userRepository).save(userPO);
+    verify(rsEventRepository).save(rsEventPO);
+    verify(voteRepository).save(VoteDto.builder()
+            .localDateTime(localDateTime)
+            .rsEvent(rsEventPO)
+            .user(userPO)
+            .num(3)
+            .build());
+
+    assertEquals(userPO.getVoteNum(), 2);
+    assertEquals(rsEventPO.getVoteNum(), 4);
   }
 
   @Test
@@ -85,10 +91,26 @@ class RsServiceTest {
     when(rsEventRepository.findById(anyInt())).thenReturn(Optional.empty());
     when(userRepository.findById(anyInt())).thenReturn(Optional.empty());
     //when&then
-    assertThrows(
-        RuntimeException.class,
-        () -> {
-          rsService.vote(vote, 1);
-        });
+    assertThrows(RuntimeException.class, () -> {
+      rsService.vote(vote, 1);
+    });
+  }
+
+  @Test
+  void should_buy_event_when_rank_num_is_exist() {
+    UserDto userDto = UserDto.builder().userName("Mike").age(20).phone("13386688553")
+            .email("mike@thoughtworks.com").gender("male").voteNum(20).build();
+    RsEventDto rsEventDto = RsEventDto.builder().eventName("FirstEvent").keyword("Economy")
+            .voteNum(10).user(userDto).build();
+
+    when(rsEventRepository.findByRankNum(anyInt())).thenReturn(Optional.of(rsEventDto));
+    when(userRepository.findById(anyInt())).thenReturn(Optional.of(userDto));
+
+    rsService.buy(100, 1, rsEvent);
+
+    verify(rsEventRepository).save(rsEventDto);
+
+    assertEquals(rsEventDto.getAmount(), 100);
+    assertEquals(rsEventDto.getRankNum(), 1);
   }
 }

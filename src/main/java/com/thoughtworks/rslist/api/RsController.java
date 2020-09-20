@@ -102,12 +102,7 @@ public class RsController {
   @PostMapping("/rs/buy")
   public ResponseEntity buyEvent(@RequestParam int amount, @RequestParam int rank,
                                  @RequestBody RsEvent rsEvent) {
-    Optional<RsEventDto> eventOptional = rsService.findByRankNum(rank);
-    Optional<UserDto> userOptional = userService.findById(rsEvent.getUserId());
-    if (!eventOptional.isPresent() || eventOptional.get().getAmount() > amount) {
-      return ResponseEntity.badRequest().build();
-    }
-    return rsService.buy(eventOptional.get().getId(), rsEvent, userOptional.get(), amount, rank);
+    return rsService.buy(amount, rank, rsEvent);
   }
 
 
