@@ -1,5 +1,7 @@
 package com.thoughtworks.rslist.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.thoughtworks.rslist.domain.RsEvent;
 import com.thoughtworks.rslist.dto.RsEventDto;
 import com.thoughtworks.rslist.dto.UserDto;
 import com.thoughtworks.rslist.dto.VoteDto;
@@ -12,9 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasKey;
@@ -37,20 +41,23 @@ class RsControllerTest {
   @Autowired VoteRepository voteRepository;
   private UserDto userDto;
 
+  private ObjectMapper objectMapper;
+
   @BeforeEach
   void setUp() {
     voteRepository.deleteAll();
     rsEventRepository.deleteAll();
     userRepository.deleteAll();
-    userDto =
-        UserDto.builder()
-            .voteNum(10)
-            .phone("188888888888")
-            .gender("female")
-            .email("a@b.com")
-            .age(19)
-            .userName("idolice")
-            .build();
+    objectMapper = new ObjectMapper();
+    userDto = userRepository.save(UserDto.builder().userName("Mike").age(20).phone("13386688553")
+            .email("mike@thoughtworks.com").gender("male").voteNum(20).build());
+    rsEventRepository.save(RsEventDto.builder().eventName("FirstEvent").keyword("Economy")
+            .voteNum(10).user(userDto).rankNum(1).build());
+    rsEventRepository.save(RsEventDto.builder().eventName("SecondEvent").keyword("Politics")
+            .voteNum(10).user(userDto).rankNum(2).build());
+    rsEventRepository.save(RsEventDto.builder().eventName("ThirdEvent").keyword("Cultural")
+            .voteNum(10).user(userDto).rankNum(3).build());
+    objectMapper = new ObjectMapper();
   }
 
   @Test
@@ -185,4 +192,27 @@ class RsControllerTest {
     assertEquals(voteDtos.size(), 1);
     assertEquals(voteDtos.get(0).getNum(), 1);
   }
+
+  @Test
+  public void should_buy_event_when_rank_num_is_exist() throws Exception {
+    RsEvent rsEvent = RsEvent.builder().eventName("ForthEvent").keyword("Entertainment")
+            .userId(userDto.getId()).voteNum(0).build();
+
+    String jsonString = objectMapper.writeValueAsString(rsEvent);
+    mockMvc.perform(post("/rs/buy")
+            .param("amount", String.valueOf(100))
+            .param("rank", String.valueOf(1))
+            .content(jsonString)
+            .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
+    mockMvc.perform(get("/rs/list"))
+            .andExpect(jsonPath("$", hasSize(3)))
+            .andExpect(jsonPath("$[2].eventName", is("ForthEvent")))
+            .andExpect(jsonPath("$[2].keyword", is("Entertainment")))
+            .andExpect(jsonPath("$[2].amount", is(100)))
+            .andExpect(jsonPath("$[2].rank", is(1)))
+            .andExpect(status().isOk());
+  }
+
 }

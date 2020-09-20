@@ -10,6 +10,7 @@ import com.thoughtworks.rslist.exception.RequestNotValidException;
 import com.thoughtworks.rslist.repository.RsEventRepository;
 import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.service.RsService;
+import com.thoughtworks.rslist.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -32,6 +33,7 @@ public class RsController {
   @Autowired RsEventRepository rsEventRepository;
   @Autowired UserRepository userRepository;
   @Autowired RsService rsService;
+  @Autowired UserService userService;
 
   @GetMapping("/rs/list")
   public ResponseEntity<List<RsEvent>> getRsEventListBetween(
@@ -45,6 +47,8 @@ public class RsController {
                         .keyword(item.getKeyword())
                         .userId(item.getId())
                         .voteNum(item.getVoteNum())
+                        .amount(item.getAmount())
+                        .rank(item.getRankNum())
                         .build())
             .collect(Collectors.toList());
     if (start == null || end == null) {
@@ -95,10 +99,15 @@ public class RsController {
     return ResponseEntity.ok().build();
   }
 
-  @PostMapping("/rs/buy/{id}")
-  public ResponseEntity buy(@PathVariable int id, @RequestBody Trade trade){
-    rsService.buy(trade, id);
-    return ResponseEntity.ok().build();
+  @PostMapping("/rs/buy")
+  public ResponseEntity buyEvent(@RequestParam int amount, @RequestParam int rank,
+                                 @RequestBody RsEvent rsEvent) {
+    Optional<RsEventDto> eventOptional = rsService.findByRankNum(rank);
+    Optional<UserDto> userOptional = userService.findById(rsEvent.getUserId());
+    if (!eventOptional.isPresent() || eventOptional.get().getAmount() > amount) {
+      return ResponseEntity.badRequest().build();
+    }
+    return rsService.buy(eventOptional.get().getId(), rsEvent, userOptional.get(), amount, rank);
   }
 
 
