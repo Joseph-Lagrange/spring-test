@@ -237,4 +237,29 @@ class RsControllerTest {
             .andExpect(status().isOk());
   }
 
+  @Test
+  public void should_not_buy_event_when_amount_is_lower() throws Exception {
+    RsEvent rsEvent = RsEvent.builder().eventName("ForthEvent").keyword("Entertainment")
+            .userId(userDto.getId()).voteNum(0).build();
+
+    String jsonString = objectMapper.writeValueAsString(rsEvent);
+    mockMvc.perform(post("/rs/buy")
+            .param("amount", String.valueOf(100))
+            .param("rank", String.valueOf(1))
+            .content(jsonString)
+            .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
+    rsEvent = RsEvent.builder().eventName("FifthEvent").keyword("Science")
+            .userId(userDto.getId()).voteNum(0).build();
+
+    jsonString = objectMapper.writeValueAsString(rsEvent);
+    mockMvc.perform(post("/rs/buy")
+            .param("amount", String.valueOf(50))
+            .param("rank", String.valueOf(1))
+            .content(jsonString)
+            .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isBadRequest());
+  }
+
 }
