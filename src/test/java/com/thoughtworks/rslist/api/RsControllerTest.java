@@ -215,4 +215,26 @@ class RsControllerTest {
             .andExpect(status().isOk());
   }
 
+  @Test
+  public void should_not_buy_event_when_rank_num_is_not_exist() throws Exception {
+    RsEvent rsEvent = RsEvent.builder().eventName("ForthEvent").keyword("Entertainment")
+            .userId(userDto.getId()).voteNum(0).build();
+
+    String jsonString = objectMapper.writeValueAsString(rsEvent);
+    mockMvc.perform(post("/rs/buy")
+            .param("amount", String.valueOf(100))
+            .param("rank", String.valueOf(7))
+            .content(jsonString)
+            .contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isBadRequest());
+
+    mockMvc.perform(get("/rs/list"))
+            .andExpect(jsonPath("$", hasSize(3)))
+            .andExpect(jsonPath("$[2].eventName", is("ThirdEvent")))
+            .andExpect(jsonPath("$[2].keyword", is("Cultural")))
+            .andExpect(jsonPath("$[2].amount", is(0)))
+            .andExpect(jsonPath("$[2].rank", is(3)))
+            .andExpect(status().isOk());
+  }
+
 }
